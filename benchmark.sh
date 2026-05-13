@@ -1,0 +1,120 @@
+#!/bin/bash
+
+set -e
+
+# Number of iterations
+ITERATIONS=10
+
+# Limits
+CPU_LIMIT=2
+MEM_LIMIT=2G
+
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+WORKSPACE_DIR=$(pwd)
+mkdir -p "${WORKSPACE_DIR}/results" "${WORKSPACE_DIR}/logs"
+results_file="${WORKSPACE_DIR}/results/results_${TIMESTAMP}.csv"
+echo "run_idx,jdk,aot,coh,process_started_rss_mb,time_to_process_start_ms" > $results_file
+
+measure_run() {
+    local run_idx=$1
+    local jdk=$2
+    local aot=$3
+    local coh=$4
+    local java_cmd=$5
+    
+    local log_file="${WORKSPACE_DIR}/logs/run_${jdk}_aot${aot}_coh${coh}_${run_idx}_${TIMESTAMP}.log"
+    
+    # Start the process in the background
+    $java_cmd > "$log_file" 2>&1 &
+    local pid=$!
+    
+    # Wait for the application to start
+    local process_in_milliseconds=""
+    local timeout_counter=0
+    while [[ $timeout_counter -lt 600 ]]; do
+        if grep -q "Started DemoApplication in" "$log_file"; then
+            local process_in_seconds=$(grep -Po "Started DemoApplication in \K[0-9]+\.[0-9]+" "$log_file")
+            process_in_milliseconds=$(awk "BEGIN {print int($process_in_seconds * 1000)}")
+            break
+        fi
+        sleep 0.1
+        timeout_counter=$((timeout_counter + 1))
+    done
+    
+    if [[ -z "$process_in_milliseconds" ]]; then
+        echo "Failed to start in time. Check $log_file"
+        kill -9 $pid 2>/dev/null || true
+        exit 1
+    fi
+    
+    # Measure RSS
+    local rss_in_bytes=$(ps -o rss= $pid)
+    local rss_in_mb=$((rss_in_bytes / 1024))
+    
+    # Kill the process
+    kill -9 $pid 2>/dev/null || true
+    wait $pid 2>/dev/null || true
+    
+    # Record result
+    echo "$run_idx,$jdk,$aot,$coh,$rss_in_mb,$process_in_milliseconds" >> $results_file
+}
+
+run_variant() {
+    cd "${WORKSPACE_DIR}"
+    local jdk_version=$1
+    local java_home="/opt/jdk${jdk_version}"
+    export JAVA_HOME=$java_home
+    export PATH=$JAVA_HOME/bin:$PATH
+    
+    echo "========================================"
+    echo "Running benchmarks for JDK ${jdk_version}"
+    echo "========================================"
+    
+    echo "Building application with JDK ${jdk_version}..."
+    ./mvnw clean package -DskipTests > /dev/null 2>&1
+    
+    echo "Extracting application..."
+    java -Djarmode=tools -jar target/demo-0.0.1-SNAPSHOT.jar extract --destination target/app
+    
+    local base_cmd="java -XX:ActiveProcessorCount=${CPU_LIMIT} -XX:MaxRAM=${MEM_LIMIT}"
+    local jar_path="demo-0.0.1-SNAPSHOT.jar"
+    
+    cd "${WORKSPACE_DIR}/target/app"
+    
+    for i in $(seq 1 $ITERATIONS); do
+        echo -n "Run $i/$ITERATIONS... "
+        
+        # 1. Baseline (No AOT, No COH)
+        measure_run "$i" "$jdk_version" "false" "false" "$base_cmd -jar $jar_path"
+        
+        # 2. COH (No AOT, COH enabled)
+        measure_run "$i" "$jdk_version" "false" "true" "$base_cmd -XX:+UseCompactObjectHeaders -jar $jar_path"
+        
+        # 3. AOT (AOT enabled, No COH)
+        local aot_cmd="$base_cmd -Dspring.aot.enabled=true"
+        # AOT Training
+        $aot_cmd -Dspring.context.exit=onRefresh -XX:AOTMode=record -XX:AOTConfiguration=application_${jdk_version}.aotconf -jar $jar_path > /dev/null 2>&1
+        # AOT Create
+        $aot_cmd -XX:AOTMode=create -XX:AOTConfiguration=application_${jdk_version}.aotconf -XX:AOTCache=application_${jdk_version}.aot -jar $jar_path > /dev/null 2>&1
+        # Measure
+        measure_run "$i" "$jdk_version" "true" "false" "$aot_cmd -XX:AOTCache=application_${jdk_version}.aot -jar $jar_path"
+        
+        # 4. AOT + COH (AOT enabled, COH enabled)
+        local coh_cmd="$base_cmd -Dspring.aot.enabled=true -XX:+UseCompactObjectHeaders"
+        # AOT Training with COH
+        $coh_cmd -Dspring.context.exit=onRefresh -XX:AOTMode=record -XX:AOTConfiguration=application_coh_${jdk_version}.aotconf -jar $jar_path > /dev/null 2>&1
+        # AOT Create with COH
+        $coh_cmd -XX:AOTMode=create -XX:AOTConfiguration=application_coh_${jdk_version}.aotconf -XX:AOTCache=application_coh_${jdk_version}.aot -jar $jar_path > /dev/null 2>&1
+        # Measure
+        measure_run "$i" "$jdk_version" "true" "true" "$coh_cmd -XX:AOTCache=application_coh_${jdk_version}.aot -jar $jar_path"
+        
+        echo "Done"
+    done
+}
+
+run_variant "25"
+run_variant "27"
+
+cd "${WORKSPACE_DIR}"
+./generate-summary.sh "$results_file"
+
