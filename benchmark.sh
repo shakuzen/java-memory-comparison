@@ -70,6 +70,10 @@ run_variant() {
     ./mvnw clean package -DskipTests > /dev/null 2>&1
     
     echo "Extracting application..."
+    # Extract the Spring Boot fat JAR to run the application directly from the filesystem.
+    # This avoids the memory overhead of the nested JAR classloader, which is important
+    # for optimal footprint when using AOT and CDS.
+    # See: https://docs.spring.io/spring-boot/reference/packaging/efficient.html
     java -Djarmode=tools -jar target/demo-0.0.1-SNAPSHOT.jar extract --destination target/app
     
     local base_cmd="java"
