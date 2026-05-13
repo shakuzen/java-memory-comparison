@@ -5,10 +5,6 @@ set -e
 # Number of iterations
 ITERATIONS=10
 
-# Limits
-CPU_LIMIT=2
-MEM_LIMIT=2G
-
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 WORKSPACE_DIR=$(pwd)
 mkdir -p "${WORKSPACE_DIR}/results" "${WORKSPACE_DIR}/logs"
@@ -76,7 +72,7 @@ run_variant() {
     echo "Extracting application..."
     java -Djarmode=tools -jar target/demo-0.0.1-SNAPSHOT.jar extract --destination target/app
     
-    local base_cmd="java -XX:ActiveProcessorCount=${CPU_LIMIT} -XX:MaxRAM=${MEM_LIMIT}"
+    local base_cmd="java"
     local jar_path="demo-0.0.1-SNAPSHOT.jar"
     
     cd "${WORKSPACE_DIR}/target/app"

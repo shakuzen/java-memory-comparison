@@ -40,4 +40,4 @@ The benchmark tests the following configurations for both JDK 25 and JDK 27:
 2. **AOT**: `java -XX:AOTCache=app.aot -jar app.jar`
 3. **AOT + COH**: `java -XX:+UseCompactObjectHeaders -XX:AOTCache=app_coh.aot -jar app.jar`
 
-*Note: The container restricts the application to 2 CPUs and a 2GB memory limit (`-XX:ActiveProcessorCount=2 -XX:MaxRAM=2G`).*
+*Note: The container restricts the application to 2 CPUs and a 2GB memory limit via Docker container limits (`--cpus=2 --memory=2g`). Modern JVMs are container-aware and will automatically respect these cgroup limits.*
