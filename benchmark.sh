@@ -43,7 +43,7 @@ measure_run() {
     # Wait for the application to start
     local process_in_milliseconds=""
     local timeout_counter=0
-    while [[ $timeout_counter -lt 600 ]]; do
+    while [[ $timeout_counter -lt 100 ]]; do
         if grep -q "Started DemoApplication in" "$log_file"; then
             local process_in_seconds=$(grep -Po "Started DemoApplication in \K[0-9]+\.[0-9]+" "$log_file")
             process_in_milliseconds=$(awk "BEGIN {print int($process_in_seconds * 1000)}")
