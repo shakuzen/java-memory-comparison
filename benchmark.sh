@@ -36,8 +36,14 @@ measure_run() {
     
     local log_file="${WORKSPACE_DIR}/logs/run_${jdk}_aot${aot}_coh${coh}_${run_idx}_${TIMESTAMP}.log"
     
+    # Create log file before starting the background process to avoid a race
+    # condition where grep checks the file before the forked child creates it.
+    # This race is visible on Docker Desktop for Windows where volume mount I/O
+    # is slower than on native Linux.
+    > "$log_file"
+
     # Start the process in the background
-    $java_cmd > "$log_file" 2>&1 &
+    $java_cmd >> "$log_file" 2>&1 &
     local pid=$!
     
     # Wait for the application to start
