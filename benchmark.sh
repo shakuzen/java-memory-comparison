@@ -55,6 +55,22 @@ measure_run() {
     echo "$run_idx,$jdk,$aot,$coh,$rss_in_mb,$process_in_milliseconds" >> $results_file
 }
 
+echo "========================================"
+echo "Building application (Once)"
+echo "========================================"
+export JAVA_HOME=/opt/jdk25
+export PATH=$JAVA_HOME/bin:$PATH
+
+echo "Building application with JDK 25..."
+./mvnw clean package -DskipTests > /dev/null 2>&1
+
+echo "Extracting application..."
+# Extract the Spring Boot fat JAR to run the application directly from the filesystem.
+# This avoids the memory overhead of the nested JAR classloader, which is important
+# for optimal footprint when using AOT and CDS.
+# See: https://docs.spring.io/spring-boot/reference/packaging/efficient.html
+java -Djarmode=tools -jar target/demo-0.0.1-SNAPSHOT.jar extract --destination target/app
+
 run_variant() {
     cd "${WORKSPACE_DIR}"
     local jdk_version=$1
@@ -65,16 +81,6 @@ run_variant() {
     echo "========================================"
     echo "Running benchmarks for JDK ${jdk_version}"
     echo "========================================"
-    
-    echo "Building application with JDK ${jdk_version}..."
-    ./mvnw clean package -DskipTests > /dev/null 2>&1
-    
-    echo "Extracting application..."
-    # Extract the Spring Boot fat JAR to run the application directly from the filesystem.
-    # This avoids the memory overhead of the nested JAR classloader, which is important
-    # for optimal footprint when using AOT and CDS.
-    # See: https://docs.spring.io/spring-boot/reference/packaging/efficient.html
-    java -Djarmode=tools -jar target/demo-0.0.1-SNAPSHOT.jar extract --destination target/app
     
     local base_cmd="java"
     local jar_path="demo-0.0.1-SNAPSHOT.jar"
