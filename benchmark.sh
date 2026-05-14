@@ -81,37 +81,38 @@ run_variant() {
     echo "========================================"
     echo "Running benchmarks for JDK ${jdk_version}"
     echo "========================================"
-    
-    local base_cmd="java"
+
+    java -version
+
     local jar_path="demo-0.0.1-SNAPSHOT.jar"
     
     cd "${WORKSPACE_DIR}/target/app"
     
-    local aot_cmd="$base_cmd -Dspring.aot.enabled=true"
-    local coh_cmd="$base_cmd -Dspring.aot.enabled=true -XX:+UseCompactObjectHeaders"
+    local aot_only_cmd="java -Dspring.aot.enabled=true"
+    local aot_coh_cmd="java -Dspring.aot.enabled=true -XX:+UseCompactObjectHeaders"
     
     echo "Preparing AOT cache for JDK ${jdk_version} (No COH)..."
-    $aot_cmd -Dspring.context.exit=onRefresh -XX:AOTMode=record -XX:AOTConfiguration=application_${jdk_version}.aotconf -jar $jar_path > /dev/null 2>&1
-    $aot_cmd -XX:AOTMode=create -XX:AOTConfiguration=application_${jdk_version}.aotconf -XX:AOTCache=application_${jdk_version}.aot -jar $jar_path > /dev/null 2>&1
+    $aot_only_cmd -Dspring.context.exit=onRefresh -XX:AOTMode=record -XX:AOTConfiguration=application_${jdk_version}.aotconf -jar $jar_path > /dev/null 2>&1
+    $aot_only_cmd -XX:AOTMode=create -XX:AOTConfiguration=application_${jdk_version}.aotconf -XX:AOTCache=application_${jdk_version}.aot -jar $jar_path > /dev/null 2>&1
     
     echo "Preparing AOT cache for JDK ${jdk_version} (With COH)..."
-    $coh_cmd -Dspring.context.exit=onRefresh -XX:AOTMode=record -XX:AOTConfiguration=application_coh_${jdk_version}.aotconf -jar $jar_path > /dev/null 2>&1
-    $coh_cmd -XX:AOTMode=create -XX:AOTConfiguration=application_coh_${jdk_version}.aotconf -XX:AOTCache=application_coh_${jdk_version}.aot -jar $jar_path > /dev/null 2>&1
+    $aot_coh_cmd -Dspring.context.exit=onRefresh -XX:AOTMode=record -XX:AOTConfiguration=application_coh_${jdk_version}.aotconf -jar $jar_path > /dev/null 2>&1
+    $aot_coh_cmd -XX:AOTMode=create -XX:AOTConfiguration=application_coh_${jdk_version}.aotconf -XX:AOTCache=application_coh_${jdk_version}.aot -jar $jar_path > /dev/null 2>&1
     
     for i in $(seq 1 $ITERATIONS); do
         echo -n "Run $i/$ITERATIONS... "
         
         # 1. Baseline (No AOT, No COH)
-        measure_run "$i" "$jdk_version" "false" "false" "$base_cmd -jar $jar_path"
+        measure_run "$i" "$jdk_version" "false" "false" "java -jar $jar_path"
         
         # 2. COH (No AOT, COH enabled)
-        measure_run "$i" "$jdk_version" "false" "true" "$base_cmd -XX:+UseCompactObjectHeaders -jar $jar_path"
+        measure_run "$i" "$jdk_version" "false" "true" "java -XX:+UseCompactObjectHeaders -jar $jar_path"
         
         # 3. AOT (AOT enabled, No COH)
-        measure_run "$i" "$jdk_version" "true" "false" "$aot_cmd -XX:AOTCache=application_${jdk_version}.aot -jar $jar_path"
+        measure_run "$i" "$jdk_version" "true" "false" "$aot_only_cmd -XX:AOTCache=application_${jdk_version}.aot -jar $jar_path"
         
         # 4. AOT + COH (AOT enabled, COH enabled)
-        measure_run "$i" "$jdk_version" "true" "true" "$coh_cmd -XX:AOTCache=application_coh_${jdk_version}.aot -jar $jar_path"
+        measure_run "$i" "$jdk_version" "true" "true" "$aot_coh_cmd -XX:AOTCache=application_coh_${jdk_version}.aot -jar $jar_path"
         
         echo "Done"
     done
