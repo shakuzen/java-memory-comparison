@@ -87,6 +87,17 @@ run_variant() {
     
     cd "${WORKSPACE_DIR}/target/app"
     
+    local aot_cmd="$base_cmd -Dspring.aot.enabled=true"
+    local coh_cmd="$base_cmd -Dspring.aot.enabled=true -XX:+UseCompactObjectHeaders"
+    
+    echo "Preparing AOT cache for JDK ${jdk_version} (No COH)..."
+    $aot_cmd -Dspring.context.exit=onRefresh -XX:AOTMode=record -XX:AOTConfiguration=application_${jdk_version}.aotconf -jar $jar_path > /dev/null 2>&1
+    $aot_cmd -XX:AOTMode=create -XX:AOTConfiguration=application_${jdk_version}.aotconf -XX:AOTCache=application_${jdk_version}.aot -jar $jar_path > /dev/null 2>&1
+    
+    echo "Preparing AOT cache for JDK ${jdk_version} (With COH)..."
+    $coh_cmd -Dspring.context.exit=onRefresh -XX:AOTMode=record -XX:AOTConfiguration=application_coh_${jdk_version}.aotconf -jar $jar_path > /dev/null 2>&1
+    $coh_cmd -XX:AOTMode=create -XX:AOTConfiguration=application_coh_${jdk_version}.aotconf -XX:AOTCache=application_coh_${jdk_version}.aot -jar $jar_path > /dev/null 2>&1
+    
     for i in $(seq 1 $ITERATIONS); do
         echo -n "Run $i/$ITERATIONS... "
         
@@ -97,21 +108,9 @@ run_variant() {
         measure_run "$i" "$jdk_version" "false" "true" "$base_cmd -XX:+UseCompactObjectHeaders -jar $jar_path"
         
         # 3. AOT (AOT enabled, No COH)
-        local aot_cmd="$base_cmd -Dspring.aot.enabled=true"
-        # AOT Training
-        $aot_cmd -Dspring.context.exit=onRefresh -XX:AOTMode=record -XX:AOTConfiguration=application_${jdk_version}.aotconf -jar $jar_path > /dev/null 2>&1
-        # AOT Create
-        $aot_cmd -XX:AOTMode=create -XX:AOTConfiguration=application_${jdk_version}.aotconf -XX:AOTCache=application_${jdk_version}.aot -jar $jar_path > /dev/null 2>&1
-        # Measure
         measure_run "$i" "$jdk_version" "true" "false" "$aot_cmd -XX:AOTCache=application_${jdk_version}.aot -jar $jar_path"
         
         # 4. AOT + COH (AOT enabled, COH enabled)
-        local coh_cmd="$base_cmd -Dspring.aot.enabled=true -XX:+UseCompactObjectHeaders"
-        # AOT Training with COH
-        $coh_cmd -Dspring.context.exit=onRefresh -XX:AOTMode=record -XX:AOTConfiguration=application_coh_${jdk_version}.aotconf -jar $jar_path > /dev/null 2>&1
-        # AOT Create with COH
-        $coh_cmd -XX:AOTMode=create -XX:AOTConfiguration=application_coh_${jdk_version}.aotconf -XX:AOTCache=application_coh_${jdk_version}.aot -jar $jar_path > /dev/null 2>&1
-        # Measure
         measure_run "$i" "$jdk_version" "true" "true" "$coh_cmd -XX:AOTCache=application_coh_${jdk_version}.aot -jar $jar_path"
         
         echo "Done"
