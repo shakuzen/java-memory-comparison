@@ -17,14 +17,26 @@ echo "========================================"
 
 awk -F',' '
 BEGIN {
-    print "Configuration\t\t\tAvg RSS (MB)\tAvg Startup (ms)"
-    print "----------------------------------------------------------------"
+    printf "%-30s\t%-25s\t%-25s\n", "Configuration", "RSS (MB) Avg [Min, Max]", "Startup (ms) Avg [Min, Max]"
+    print "----------------------------------------------------------------------------------------"
 }
 NR>1 {
     key = "JDK " $2 " (AOT=" $3 ", COH=" $4 ")"
     count[key]++
     sum_rss[key] += $5
     sum_time[key] += $6
+    
+    if (count[key] == 1) {
+        min_rss[key] = $5
+        max_rss[key] = $5
+        min_time[key] = $6
+        max_time[key] = $6
+    } else {
+        if ($5 < min_rss[key]) min_rss[key] = $5
+        if ($5 > max_rss[key]) max_rss[key] = $5
+        if ($6 < min_time[key]) min_time[key] = $6
+        if ($6 > max_time[key]) max_time[key] = $6
+    }
 }
 END {
     # Print in a specific order
@@ -42,7 +54,11 @@ END {
         if (count[k] > 0) {
             avg_rss = sum_rss[k] / count[k]
             avg_time = sum_time[k] / count[k]
-            printf "%-30s\t%6.2f\t\t%6.2f\n", k, avg_rss, avg_time
+            
+            rss_str = sprintf("%6.2f [%.0f, %.0f]", avg_rss, min_rss[k], max_rss[k])
+            time_str = sprintf("%6.2f [%.0f, %.0f]", avg_time, min_time[k], max_time[k])
+            
+            printf "%-30s\t%-25s\t%-25s\n", k, rss_str, time_str
         }
     }
-}' $results_file
+}' "$results_file"
