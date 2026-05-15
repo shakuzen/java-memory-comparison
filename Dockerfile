@@ -12,8 +12,8 @@ RUN mkdir -p /opt/jdk25 &&\
 RUN mkdir -p /opt/jdk27 &&\
     cd /opt/jdk27 &&\
     case `uname -m` in aarch64) \
-    curl -L "https://download.java.net/java/early_access/jdk27/21/GPL/openjdk-27-ea+21_linux-aarch64_bin.tar.gz" | tar zx --strip-components=1 ;; \
-    *) curl -L "https://download.java.net/java/early_access/jdk27/21/GPL/openjdk-27-ea+21_linux-x64_bin.tar.gz" | tar zx --strip-components=1 ;; esac
+    curl -L "https://download.java.net/java/early_access/jdk27/22/GPL/openjdk-27-ea+22_linux-aarch64_bin.tar.gz" | tar zx --strip-components=1 ;; \
+    *) curl -L "https://download.java.net/java/early_access/jdk27/22/GPL/openjdk-27-ea+22_linux-x64_bin.tar.gz" | tar zx --strip-components=1 ;; esac
 
 WORKDIR /work
 
