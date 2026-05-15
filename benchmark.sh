@@ -68,6 +68,9 @@ measure_run() {
     # Measure RSS
     local rss_in_bytes=$(ps -o rss= $pid)
     local rss_in_mb=$((rss_in_bytes / 1024))
+
+    # Save NMT summary
+    jcmd $pid VM.native_memory summary > "${WORKSPACE_DIR}/logs/run_${jdk}_aot${aot}_coh${coh}_${run_idx}_${TIMESTAMP}-nmt-summary.txt"
     
     # Kill the process
     kill -9 $pid 2>/dev/null || true
@@ -90,12 +93,13 @@ run_variant() {
 
     java -version
 
+    local base_cmd="java -XX:NativeMemoryTracking=summary"
     local jar_path="demo-0.0.1-SNAPSHOT.jar"
     
     cd "${WORKSPACE_DIR}/target/app"
     
-    local aot_only_cmd="java -Dspring.aot.enabled=true"
-    local aot_coh_cmd="java -Dspring.aot.enabled=true -XX:+UseCompactObjectHeaders"
+    local aot_only_cmd="$base_cmd -Dspring.aot.enabled=true"
+    local aot_coh_cmd="$base_cmd -Dspring.aot.enabled=true -XX:+UseCompactObjectHeaders"
     
     echo "Preparing AOT cache for JDK ${jdk_version} (No COH)..."
     $aot_only_cmd -Dspring.context.exit=onRefresh -XX:AOTMode=record -XX:AOTConfiguration=application_${jdk_version}.aotconf -jar $jar_path > /dev/null 2>&1
@@ -109,10 +113,10 @@ run_variant() {
         echo -n "Run $i/$ITERATIONS... "
         
         # 1. Baseline (No AOT, No COH)
-        measure_run "$i" "$jdk_version" "false" "false" "java -jar $jar_path"
+        measure_run "$i" "$jdk_version" "false" "false" "$base_cmd -jar $jar_path"
         
         # 2. COH (No AOT, COH enabled)
-        measure_run "$i" "$jdk_version" "false" "true" "java -XX:+UseCompactObjectHeaders -jar $jar_path"
+        measure_run "$i" "$jdk_version" "false" "true" "$base_cmd -XX:+UseCompactObjectHeaders -jar $jar_path"
         
         # 3. AOT (AOT enabled, No COH)
         measure_run "$i" "$jdk_version" "true" "false" "$aot_only_cmd -XX:AOTCache=application_${jdk_version}.aot -jar $jar_path"

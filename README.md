@@ -32,6 +32,18 @@ The benchmark will:
 3. Measure the RSS (in MB) and the startup time (in ms).
 4. Output a summary table.
 
+You can also run `./generate-summary.sh` locally at any time to re-generate the summary table from the existing `results/results_*.csv` data without re-running the full benchmark suite.
+
+### Native Memory Tracking (NMT)
+
+The benchmark script also captures Native Memory Tracking (NMT) summaries for each run using `jcmd VM.native_memory summary`. These summaries are saved in the `logs/` directory.
+
+You can parse and aggregate these NMT summaries to see exactly which JVM subsystems (Java Heap, Compiler, Metaspace, etc.) are contributing to the memory footprint across the different configurations:
+
+```bash
+python3 parse_nmt.py
+```
+
 ## Benchmark Details
 
 The benchmark tests the following configurations for both JDK 25 and JDK 27:
