@@ -12,6 +12,8 @@ The application is a standard Spring Boot 4.1.0-RC1 web application (generated v
 2. **AOT + COH Footprint Penalty**
    While the Compact Object Headers feature (`-XX:+UseCompactObjectHeaders`) reduces memory footprint with otherwise default flags, combining COH with Ahead-of-Time (AOT) compilation and Class Data Sharing (CDS) slightly *increases* the memory footprint compared to running AOT without COH. This penalty is present in both JDK 25 and the latest JDK 27 EA builds.
 
+**Update:** _#2 above may be noise within run-to-run variance._
+
 ## Prerequisites
 
 - Docker
