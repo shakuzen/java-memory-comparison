@@ -2,6 +2,14 @@
 
 set -e
 
+ADDITIONAL_JAVA_OPTS=""
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        -X*) ADDITIONAL_JAVA_OPTS="$ADDITIONAL_JAVA_OPTS $1"; shift ;;
+        *) echo "Unknown parameter passed: $1"; exit 1 ;;
+    esac
+done
+
 # Number of iterations
 ITERATIONS=10
 
@@ -94,7 +102,7 @@ run_variant() {
     
     cd "${WORKSPACE_DIR}/target/app"
     
-    local base_java_cmd="java"
+    local base_java_cmd="java $ADDITIONAL_JAVA_OPTS"
     local aot_only_cmd="$base_java_cmd -Dspring.aot.enabled=true"
     local aot_coh_cmd="$base_java_cmd -Dspring.aot.enabled=true -XX:+UseCompactObjectHeaders"
     
