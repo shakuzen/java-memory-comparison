@@ -94,8 +94,9 @@ run_variant() {
     
     cd "${WORKSPACE_DIR}/target/app"
     
-    local aot_only_cmd="java -Dspring.aot.enabled=true"
-    local aot_coh_cmd="java -Dspring.aot.enabled=true -XX:+UseCompactObjectHeaders"
+    local base_java_cmd="java"
+    local aot_only_cmd="$base_java_cmd -Dspring.aot.enabled=true"
+    local aot_coh_cmd="$base_java_cmd -Dspring.aot.enabled=true -XX:+UseCompactObjectHeaders"
     
     echo "Preparing AOT cache for JDK ${jdk_version} (No COH)..."
     $aot_only_cmd -Dspring.context.exit=onRefresh -XX:AOTMode=record -XX:AOTConfiguration=application_${jdk_version}.aotconf -jar $jar_path > /dev/null 2>&1
@@ -109,10 +110,10 @@ run_variant() {
         echo -n "Run $i/$ITERATIONS... "
         
         # 1. Baseline (No AOT, No COH)
-        measure_run "$i" "$jdk_version" "false" "false" "java -jar $jar_path"
+        measure_run "$i" "$jdk_version" "false" "false" "$base_java_cmd -jar $jar_path"
         
         # 2. COH (No AOT, COH enabled)
-        measure_run "$i" "$jdk_version" "false" "true" "java -XX:+UseCompactObjectHeaders -jar $jar_path"
+        measure_run "$i" "$jdk_version" "false" "true" "$base_java_cmd -XX:+UseCompactObjectHeaders -jar $jar_path"
         
         # 3. AOT (AOT enabled, No COH)
         measure_run "$i" "$jdk_version" "true" "false" "$aot_only_cmd -XX:AOTCache=application_${jdk_version}.aot -jar $jar_path"
