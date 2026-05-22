@@ -48,9 +48,9 @@ python3 parse_nmt.py
 
 The benchmark tests the following configurations for both JDK 25 and JDK 27:
 
-1. **Baseline**: `java -jar target/app/demo-0.0.1-SNAPSHOT.jar`
+1. **No COH**: `java -XX:-UseCompactObjectHeaders -jar target/app/demo-0.0.1-SNAPSHOT.jar`
 2. **COH**: `java -XX:+UseCompactObjectHeaders -jar target/app/demo-0.0.1-SNAPSHOT.jar`
-3. **AOT**: `java -Dspring.aot.enabled=true -XX:AOTCache=target/app/application_coh_XX.aot -jar target/app/demo-0.0.1-SNAPSHOT.jar`
+3. **AOT**: `java -Dspring.aot.enabled=true -XX:-UseCompactObjectHeaders -XX:AOTCache=target/app/application_XX.aot -jar target/app/demo-0.0.1-SNAPSHOT.jar`
 4. **AOT + COH**: `java -Dspring.aot.enabled=true -XX:+UseCompactObjectHeaders -XX:AOTCache=target/app/application_coh_XX.aot -jar target/app/demo-0.0.1-SNAPSHOT.jar`
 
 *Note: The container restricts the application to 2 CPUs and a 2GB memory limit via Docker container limits (`--cpus=2 --memory=2g`).*
