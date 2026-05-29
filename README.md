@@ -20,7 +20,7 @@ The application is a standard Spring Boot 4.1.0-RC1 web application (generated v
 
 ## Running the Benchmark
 
-A script is provided to build a Docker image containing both JDK 25.0.3 and JDK 27 EA (build 21) and then run the benchmark suite inside the container.
+A script is provided to build a Docker image containing both JDK 25.0.3 and JDK 27 EA and then run the benchmark suite inside the container.
 
 ```bash
 ./run-benchmark-in-docker.sh
