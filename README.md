@@ -2,7 +2,7 @@
 
 This repository provides a minimal, reproducible benchmark to compare the memory footprint observed when running a Spring Boot application on recent JDK versions.
 
-The application is a standard Spring Boot 4.1.0-RC1 web application (generated via start.spring.io).
+The application is a standard Spring Boot 4.1.0 web application (generated via start.spring.io).
 
 ## The Regression
 
