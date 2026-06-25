@@ -6,11 +6,11 @@ The application is a standard Spring Boot 4.1.0-RC1 web application (generated v
 
 ## The Regressions
 
-1. **General Footprint Regression (JDK 25 vs JDK 27 EA)**
-   The memory usage (Resident Set Size, RSS) for a Spring Boot web application immediately after startup has significantly increased between JDK 25 and JDK 27 EA across tested configurations (see below). The increase is most significant in the default configuration with no command-line options.
+1. **General Footprint Regression (JDK 25 vs JDK 28 EA)**
+   The memory usage (Resident Set Size, RSS) for a Spring Boot web application immediately after startup has significantly increased between JDK 25 and JDK 28 EA across tested configurations (see below). The increase is most significant in the default configuration with no command-line options.
 
 2. **AOT + COH Footprint Penalty**
-   While the Compact Object Headers feature (`-XX:+UseCompactObjectHeaders`) reduces memory footprint with otherwise default flags, combining COH with Ahead-of-Time (AOT) compilation and Class Data Sharing (CDS) slightly *increases* the memory footprint compared to running AOT without COH. This penalty is present in both JDK 25 and the latest JDK 27 EA builds.
+   While the Compact Object Headers feature (`-XX:+UseCompactObjectHeaders`) reduces memory footprint with otherwise default flags, combining COH with Ahead-of-Time (AOT) compilation and Class Data Sharing (CDS) slightly *increases* the memory footprint compared to running AOT without COH. This penalty is present in both JDK 25 and the latest JDK 28 EA builds.
 
 **Update:** _#2 above may be noise within run-to-run variance._
 
@@ -20,7 +20,7 @@ The application is a standard Spring Boot 4.1.0-RC1 web application (generated v
 
 ## Running the Benchmark
 
-A script is provided to build a Docker image containing both JDK 25.0.3 and JDK 27 EA and then run the benchmark suite inside the container.
+A script is provided to build a Docker image containing both JDK 25.0.3 and JDK 28 EA and then run the benchmark suite inside the container.
 
 ```bash
 ./run-benchmark-in-docker.sh
@@ -34,7 +34,7 @@ The benchmark will:
 
 ## Benchmark Details
 
-The benchmark tests the following configurations for both JDK 25 and JDK 27:
+The benchmark tests the following configurations for both JDK 25 and JDK 28:
 
 1. **No COH**: `java -XX:-UseCompactObjectHeaders -jar target/app/demo-0.0.1-SNAPSHOT.jar`
 2. **COH**: `java -XX:+UseCompactObjectHeaders -jar target/app/demo-0.0.1-SNAPSHOT.jar`

@@ -101,9 +101,12 @@ run_variant() {
     local jar_path="demo-0.0.1-SNAPSHOT.jar"
     
     cd "${WORKSPACE_DIR}/target/app"
-    
-    local base_java_cmd_no_coh="java $ADDITIONAL_JAVA_OPTS -XX:-UseCompactObjectHeaders"
-    local base_java_cmd_coh="java $ADDITIONAL_JAVA_OPTS -XX:+UseCompactObjectHeaders"
+
+    local base_java_cmd="java $ADDITIONAL_JAVA_OPTS"
+    echo "Base Java command: $base_java_cmd"
+
+    local base_java_cmd_no_coh="$base_java_cmd -XX:-UseCompactObjectHeaders"
+    local base_java_cmd_coh="$base_java_cmd -XX:+UseCompactObjectHeaders"
     local aot_only_cmd="$base_java_cmd_no_coh -Dspring.aot.enabled=true"
     local aot_coh_cmd="$base_java_cmd_coh -Dspring.aot.enabled=true"
     
@@ -135,7 +138,7 @@ run_variant() {
 }
 
 run_variant "25"
-run_variant "27"
+run_variant "28"
 
 cd "${WORKSPACE_DIR}"
 ./generate-summary.sh "$results_file"

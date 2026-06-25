@@ -44,10 +44,10 @@ END {
     keys[2] = "JDK 25 (AOT=false, COH=true)"
     keys[3] = "JDK 25 (AOT=true, COH=false)"
     keys[4] = "JDK 25 (AOT=true, COH=true)"
-    keys[5] = "JDK 27 (AOT=false, COH=false)"
-    keys[6] = "JDK 27 (AOT=false, COH=true)"
-    keys[7] = "JDK 27 (AOT=true, COH=false)"
-    keys[8] = "JDK 27 (AOT=true, COH=true)"
+    keys[5] = "JDK 28 (AOT=false, COH=false)"
+    keys[6] = "JDK 28 (AOT=false, COH=true)"
+    keys[7] = "JDK 28 (AOT=true, COH=false)"
+    keys[8] = "JDK 28 (AOT=true, COH=true)"
     
     for (i=1; i<=8; i++) {
         k = keys[i]
