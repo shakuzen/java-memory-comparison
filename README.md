@@ -1,18 +1,13 @@
-# Java Memory Comparison: AOT and Compact Object Headers (COH)
+# Java Memory Footprint Comparison
 
-This repository provides a minimal, reproducible benchmark to demonstrate memory footprint regressions observed when running Spring Boot applications on recent JDK versions.
+This repository provides a minimal, reproducible benchmark to compare the memory footprint observed when running a Spring Boot application on recent JDK versions.
 
 The application is a standard Spring Boot 4.1.0-RC1 web application (generated via start.spring.io).
 
-## The Regressions
+## The Regression
 
-1. **General Footprint Regression (JDK 25 vs JDK 28 EA)**
-   The memory usage (Resident Set Size, RSS) for a Spring Boot web application immediately after startup has significantly increased between JDK 25 and JDK 28 EA across tested configurations (see below). The increase is most significant in the default configuration with no command-line options.
-
-2. **AOT + COH Footprint Penalty**
-   While the Compact Object Headers feature (`-XX:+UseCompactObjectHeaders`) reduces memory footprint with otherwise default flags, combining COH with Ahead-of-Time (AOT) compilation and Class Data Sharing (CDS) slightly *increases* the memory footprint compared to running AOT without COH. This penalty is present in both JDK 25 and the latest JDK 28 EA builds.
-
-**Update:** _#2 above may be noise within run-to-run variance._
+**JDK 25 vs JDK 28 EA:**
+The memory usage (Resident Set Size, RSS) for a Spring Boot web application immediately after startup has significantly increased between JDK 25 and JDK 28 EA across tested configurations (see below). The increase is most significant in the default configuration with no command-line options.
 
 ## Prerequisites
 
