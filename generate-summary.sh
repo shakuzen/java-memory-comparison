@@ -40,16 +40,20 @@ NR>1 {
 }
 END {
     # Print in a specific order
-    keys[1] = "JDK 25 (AOT=false, COH=false)"
-    keys[2] = "JDK 25 (AOT=false, COH=true)"
-    keys[3] = "JDK 25 (AOT=true, COH=false)"
-    keys[4] = "JDK 25 (AOT=true, COH=true)"
-    keys[5] = "JDK 28 (AOT=false, COH=false)"
-    keys[6] = "JDK 28 (AOT=false, COH=true)"
-    keys[7] = "JDK 28 (AOT=true, COH=false)"
-    keys[8] = "JDK 28 (AOT=true, COH=true)"
+    keys[1] = "JDK 25 (AOT=false, COH=default)"
+    keys[2] = "JDK 25 (AOT=false, COH=false)"
+    keys[3] = "JDK 25 (AOT=false, COH=true)"
+    keys[4] = "JDK 25 (AOT=true, COH=default)"
+    keys[5] = "JDK 25 (AOT=true, COH=false)"
+    keys[6] = "JDK 25 (AOT=true, COH=true)"
+    keys[7] = "JDK 28 (AOT=false, COH=default)"
+    keys[8] = "JDK 28 (AOT=false, COH=false)"
+    keys[9] = "JDK 28 (AOT=false, COH=true)"
+    keys[10] = "JDK 28 (AOT=true, COH=default)"
+    keys[11] = "JDK 28 (AOT=true, COH=false)"
+    keys[12] = "JDK 28 (AOT=true, COH=true)"
     
-    for (i=1; i<=8; i++) {
+    for (i=1; i<=12; i++) {
         k = keys[i]
         if (count[k] > 0) {
             avg_rss = sum_rss[k] / count[k]

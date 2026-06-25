@@ -2,10 +2,12 @@
 
 set -e
 
+INCLUDE_COH="false"
 ADDITIONAL_JAVA_OPTS=""
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         -X*) ADDITIONAL_JAVA_OPTS="$ADDITIONAL_JAVA_OPTS $1"; shift ;;
+        --include-coh) INCLUDE_COH="true"; shift ;;
         *) echo "Unknown parameter passed: $1"; exit 1 ;;
     esac
 done
@@ -35,12 +37,19 @@ echo "Extracting application..."
 # See: https://docs.spring.io/spring-boot/reference/packaging/efficient.html
 java -Djarmode=tools -jar target/demo-0.0.1-SNAPSHOT.jar extract --destination target/app
 
+declare -A RUN_COMMANDS
+
 measure_run() {
     local run_idx=$1
     local jdk=$2
     local aot=$3
     local coh=$4
     local java_cmd=$5
+    
+    local key="JDK ${jdk} (AOT=${aot}, COH=${coh})"
+    if [[ -z "${RUN_COMMANDS[$key]}" ]]; then
+        RUN_COMMANDS["$key"]="$java_cmd"
+    fi
     
     local log_file="${WORKSPACE_DIR}/logs/run_${jdk}_aot${aot}_coh${coh}_${run_idx}_${TIMESTAMP}.log"
     
@@ -102,36 +111,52 @@ run_variant() {
     
     cd "${WORKSPACE_DIR}/target/app"
 
-    local base_java_cmd="java $ADDITIONAL_JAVA_OPTS"
+    local base_java_cmd="/opt/jdk${jdk_version}/bin/java $ADDITIONAL_JAVA_OPTS"
     echo "Base Java command: $base_java_cmd"
 
-    local base_java_cmd_no_coh="$base_java_cmd -XX:-UseCompactObjectHeaders"
-    local base_java_cmd_coh="$base_java_cmd -XX:+UseCompactObjectHeaders"
-    local aot_only_cmd="$base_java_cmd_no_coh -Dspring.aot.enabled=true"
-    local aot_coh_cmd="$base_java_cmd_coh -Dspring.aot.enabled=true"
-    
-    echo "Preparing AOT cache for JDK ${jdk_version} (No COH)..."
-    $aot_only_cmd -Dspring.context.exit=onRefresh -XX:AOTMode=record -XX:AOTConfiguration=application_${jdk_version}.aotconf -jar $jar_path > /dev/null 2>&1
-    $aot_only_cmd -XX:AOTMode=create -XX:AOTConfiguration=application_${jdk_version}.aotconf -XX:AOTCache=application_${jdk_version}.aot -jar $jar_path > /dev/null 2>&1
-    
-    echo "Preparing AOT cache for JDK ${jdk_version} (With COH)..."
-    $aot_coh_cmd -Dspring.context.exit=onRefresh -XX:AOTMode=record -XX:AOTConfiguration=application_coh_${jdk_version}.aotconf -jar $jar_path > /dev/null 2>&1
-    $aot_coh_cmd -XX:AOTMode=create -XX:AOTConfiguration=application_coh_${jdk_version}.aotconf -XX:AOTCache=application_coh_${jdk_version}.aot -jar $jar_path > /dev/null 2>&1
+    if [ "$INCLUDE_COH" = "true" ]; then
+        local base_java_cmd_no_coh="$base_java_cmd -XX:-UseCompactObjectHeaders"
+        local base_java_cmd_coh="$base_java_cmd -XX:+UseCompactObjectHeaders"
+        local aot_only_cmd="$base_java_cmd_no_coh -Dspring.aot.enabled=true"
+        local aot_coh_cmd="$base_java_cmd_coh -Dspring.aot.enabled=true"
+        
+        echo "Preparing AOT cache for JDK ${jdk_version} (No COH)..."
+        $aot_only_cmd -Dspring.context.exit=onRefresh -XX:AOTMode=record -XX:AOTConfiguration=application_${jdk_version}.aotconf -jar $jar_path > /dev/null 2>&1
+        $aot_only_cmd -XX:AOTMode=create -XX:AOTConfiguration=application_${jdk_version}.aotconf -XX:AOTCache=application_${jdk_version}.aot -jar $jar_path > /dev/null 2>&1
+        
+        echo "Preparing AOT cache for JDK ${jdk_version} (With COH)..."
+        $aot_coh_cmd -Dspring.context.exit=onRefresh -XX:AOTMode=record -XX:AOTConfiguration=application_coh_${jdk_version}.aotconf -jar $jar_path > /dev/null 2>&1
+        $aot_coh_cmd -XX:AOTMode=create -XX:AOTConfiguration=application_coh_${jdk_version}.aotconf -XX:AOTCache=application_coh_${jdk_version}.aot -jar $jar_path > /dev/null 2>&1
+    else
+        local aot_default_cmd="$base_java_cmd -Dspring.aot.enabled=true"
+        
+        echo "Preparing AOT cache for JDK ${jdk_version} (Default COH)..."
+        $aot_default_cmd -Dspring.context.exit=onRefresh -XX:AOTMode=record -XX:AOTConfiguration=application_default_${jdk_version}.aotconf -jar $jar_path > /dev/null 2>&1
+        $aot_default_cmd -XX:AOTMode=create -XX:AOTConfiguration=application_default_${jdk_version}.aotconf -XX:AOTCache=application_default_${jdk_version}.aot -jar $jar_path > /dev/null 2>&1
+    fi
     
     for i in $(seq 1 $ITERATIONS); do
         echo -n "Run $i/$ITERATIONS... "
         
-        # 1. Baseline (No AOT, No COH)
-        measure_run "$i" "$jdk_version" "false" "false" "$base_java_cmd_no_coh -jar $jar_path"
-        
-        # 2. COH (No AOT, COH enabled)
-        measure_run "$i" "$jdk_version" "false" "true" "$base_java_cmd_coh -jar $jar_path"
-        
-        # 3. AOT (AOT enabled, No COH)
-        measure_run "$i" "$jdk_version" "true" "false" "$aot_only_cmd -XX:AOTCache=application_${jdk_version}.aot -jar $jar_path"
-        
-        # 4. AOT + COH (AOT enabled, COH enabled)
-        measure_run "$i" "$jdk_version" "true" "true" "$aot_coh_cmd -XX:AOTCache=application_coh_${jdk_version}.aot -jar $jar_path"
+        if [ "$INCLUDE_COH" = "true" ]; then
+            # 1. Baseline (No AOT, No COH)
+            measure_run "$i" "$jdk_version" "false" "false" "$base_java_cmd_no_coh -jar $jar_path"
+            
+            # 2. COH (No AOT, COH enabled)
+            measure_run "$i" "$jdk_version" "false" "true" "$base_java_cmd_coh -jar $jar_path"
+            
+            # 3. AOT (AOT enabled, No COH)
+            measure_run "$i" "$jdk_version" "true" "false" "$aot_only_cmd -XX:AOTCache=application_${jdk_version}.aot -jar $jar_path"
+            
+            # 4. AOT + COH (AOT enabled, COH enabled)
+            measure_run "$i" "$jdk_version" "true" "true" "$aot_coh_cmd -XX:AOTCache=application_coh_${jdk_version}.aot -jar $jar_path"
+        else
+            # 1. Baseline (No AOT, Default COH)
+            measure_run "$i" "$jdk_version" "false" "default" "$base_java_cmd -jar $jar_path"
+            
+            # 2. AOT (AOT enabled, Default COH)
+            measure_run "$i" "$jdk_version" "true" "default" "$aot_default_cmd -XX:AOTCache=application_default_${jdk_version}.aot -jar $jar_path"
+        fi
         
         echo "Done"
     done
@@ -141,5 +166,32 @@ run_variant "25"
 run_variant "28"
 
 cd "${WORKSPACE_DIR}"
+
+echo ""
+echo "========================================"
+echo "Configuration Commands"
+echo "========================================"
+keys=(
+    "JDK 25 (AOT=false, COH=default)"
+    "JDK 25 (AOT=false, COH=false)"
+    "JDK 25 (AOT=false, COH=true)"
+    "JDK 25 (AOT=true, COH=default)"
+    "JDK 25 (AOT=true, COH=false)"
+    "JDK 25 (AOT=true, COH=true)"
+    "JDK 28 (AOT=false, COH=default)"
+    "JDK 28 (AOT=false, COH=false)"
+    "JDK 28 (AOT=false, COH=true)"
+    "JDK 28 (AOT=true, COH=default)"
+    "JDK 28 (AOT=true, COH=false)"
+    "JDK 28 (AOT=true, COH=true)"
+)
+for k in "${keys[@]}"; do
+    if [[ -n "${RUN_COMMANDS[$k]}" ]]; then
+        echo "- ${k}:"
+        echo "  ${RUN_COMMANDS[$k]}"
+    fi
+done
+echo ""
+
 ./generate-summary.sh "$results_file"
 
